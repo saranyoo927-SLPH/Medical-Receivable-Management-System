@@ -72,7 +72,7 @@ header { background-color: var(--bg-card); border-bottom: 1px solid var(--border
 .crest svg { width: 24px; height: 24px; color: var(--c-paid); }
 .hd h1 { font-size: 20px; font-weight: 600; line-height: 1.2; }
 .hd .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--c-paid); margin-bottom: 2px; }
-.hd .sub { font-size: 13px; color: var(--text-muted); }
+.hd .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 .hd .rgt { display: flex; gap: 12px; align-items: center; }
 
 .status-box { text-align: right; font-size: 12px; color: var(--text-muted); }
@@ -237,7 +237,7 @@ tbody tr:hover { background: var(--bg-main); }
       <div>
         <div class="eyebrow">Accounts Receivable · Inpatient</div>
         <h1>แดชบอร์ดภาพรวมลูกหนี้ค่ารักษาพยาบาล ผู้ป่วยใน (IPD)</h1>
-        <div class="sub">โรงพยาบาลเสลภูมิ จังหวัดร้อยเอ็ด · ภาพรวมการเรียกเก็บและการชดเชยค่าบริการ</div>
+        <div class="sub">โรงพยาบาลเสลภูมิ จังหวัดร้อยเอ็ด · ภาพรวมการเรียกเก็บและการประมาณการชดเชยค่าบริการ</div>
       </div>
     </div>
     <div class="rgt">
@@ -297,7 +297,7 @@ tbody tr:hover { background: var(--bg-main); }
     <div class="bento">
       <div class="card c8">
         <div class="card-header">
-          <h3>เปรียบเทียบ ภาระหนี้ · ชดเชย · จัดเก็บ · คงเหลือ</h3>
+          <h3>เปรียบเทียบ ภาระหนี้ · ประมาณการชดเชย · จัดเก็บ · คงเหลือ</h3>
           <p>เรียงลำดับตามยอดคงเหลือสูงสุด</p>
         </div>
         <div class="chart-container"><canvas id="chFund"></canvas></div>
@@ -512,7 +512,7 @@ function renderKPIs() {
         <div class="kpi k-paid">
             <div class="kpi-title">รับชำระแล้ว <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
             <div class="kpi-val num">${fmt(pd)}</div>
-            <div class="kpi-ctx">คิดเป็น <span>${pPaid}%</span> ของยอดชดเชย</div>
+            <div class="kpi-ctx">คิดเป็น <span>${pPaid}%</span> ของประมาณการชดเชย</div>
         </div>
         <div class="kpi k-out">
             <div class="kpi-title">ลูกหนี้คงเหลือ <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
@@ -538,7 +538,7 @@ function renderKPIs() {
     
     document.getElementById('funnelContainer').innerHTML = `
         <div class="funnel-row f-row-bill"><div class="f-label">เรียกเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(db)}">${fmt(db)}</div></div></div>
-        <div class="funnel-row f-row-comp"><div class="f-label">ชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
+        <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
         <div class="funnel-row f-row-paid"><div class="f-label">จัดเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
         <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div><div class="f-val" style="display:${ou<db*0.15?'block':'none'}">${fmt(ou)}</div></div></div>
     `;
@@ -557,6 +557,21 @@ function aggData(data, keyField, limit = 0) {
     let arr = Object.values(map).sort((a, b) => b.ou - a.ou);
     if (limit > 0) arr = arr.slice(0, limit);
     return arr;
+}
+
+// ฟังก์ชันแปลงรูปแบบ "ดด/ปปปป" เป็นรูปแบบที่เรียงลำดับได้
+function parseMonthYear(myString) {
+    if (!myString || myString === 'ไม่ระบุ') return 0;
+    const parts = myString.split('/');
+    if (parts.length === 2) {
+        const m = parseInt(parts[0], 10);
+        const y = parseInt(parts[1], 10);
+        if (!isNaN(m) && !isNaN(y)) {
+             // ปีคูณ 100 แล้วบวกเดือน จะได้ตัวเลขที่เรียงลำดับถูกต้อง เช่น 256704
+             return (y * 100) + m;
+        }
+    }
+    return 0;
 }
 
 function renderCharts() {
@@ -585,7 +600,7 @@ function renderCharts() {
     const fundData = aggData(FILTERED_DATA, 'fn', 10);
     renderChart('chFund', 'bar', fundData.map(d => d.name.length > 20 ? d.name.substring(0,20)+'...' : d.name), [
         { label: 'ภาระหนี้', data: fundData.map(d => d.db), backgroundColor: COLORS.bill, borderRadius: 4 },
-        { label: 'ชดเชย', data: fundData.map(d => d.cp), backgroundColor: COLORS.comp, borderRadius: 4 },
+        { label: 'ประมาณการชดเชย', data: fundData.map(d => d.cp), backgroundColor: COLORS.comp, borderRadius: 4 },
         { label: 'รับชำระ', data: fundData.map(d => d.pd), backgroundColor: COLORS.paid, borderRadius: 4 },
         { label: 'คงเหลือ', data: fundData.map(d => d.ou), backgroundColor: COLORS.out, borderRadius: 4 }
     ]);
@@ -608,7 +623,11 @@ function renderCharts() {
     ]);
 
     // 5. Monthly Trend
-    let monthData = aggData(FILTERED_DATA, 'md').sort((a, b) => a.name.localeCompare(b.name));
+    // ปรับการเรียงลำดับ (Sort) โดยใช้ parseMonthYear ฟังก์ชันเพื่อให้เรียงตามลำดับเวลาที่ถูกต้อง
+    let monthData = aggData(FILTERED_DATA, 'md').sort((a, b) => {
+        return parseMonthYear(a.name) - parseMonthYear(b.name);
+    });
+    
     renderChart('chMonth', 'line', monthData.map(d => d.name), [
         { label: 'ภาระหนี้ตั้งต้น', data: monthData.map(d => d.db), borderColor: COLORS.bill, backgroundColor: COLORS.bill, tension: 0.3 },
         { label: 'ยอดคงเหลือปัจจุบัน', data: monthData.map(d => d.ou), borderColor: COLORS.out, backgroundColor: COLORS.out, tension: 0.3 }
@@ -676,7 +695,15 @@ function populateFilters() {
     const keys = { 'f-fund': 'fn', 'f-age': 'ag', 'f-st': 'st', 'f-mon': 'md', 'f-cl': 'cl' };
     for (const [id, key] of Object.entries(keys)) {
         const select = document.getElementById(id);
-        const uniqueVals = [...new Set(RAW_DATA.map(d => d[key]))].filter(v => v !== 'ไม่ระบุ').sort();
+        let uniqueVals = [...new Set(RAW_DATA.map(d => d[key]))].filter(v => v !== 'ไม่ระบุ');
+        
+        // ถ้าเป็นตัวกรอง 'เดือนตั้งหนี้' (f-mon) ให้เรียงตามลำดับเวลาด้วย
+        if (id === 'f-mon') {
+             uniqueVals.sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
+        } else {
+             uniqueVals.sort();
+        }
+
         const currentVal = select.value;
         select.innerHTML = '<option value="">ทั้งหมด</option>' + uniqueVals.map(v => `<option value="${v}">${v}</option>`).join('');
         if (uniqueVals.includes(currentVal)) select.value = currentVal;
@@ -711,4 +738,7 @@ document.addEventListener('DOMContentLoaded', fetchData);
 </html>
 ```eof
 
-โค้ดนี้ออกแบบมาให้ดูโปรเฟสชันนอลสุดๆ สบายตา และมีระบบจัดการเมื่อไม่พบข้อมูลแล้วครับ ลองนำไปอัปเดตดูนะครับ! มีจุดไหนอยากให้ปรับจูนเพิ่มเติ่มแจ้งได้เลยครับ
+**การแก้ไขที่ดำเนินการแล้ว:**
+1. เปลี่ยนคำว่า "ชดเชย" เป็น **"ประมาณการชดเชย"** ในทุกจุดที่คุณแนะนำเรียบร้อยแล้ว
+2. สร้างฟังก์ชัน `parseMonthYear(myString)` เพื่อใช้สำหรับการจัดเรียงข้อมูลเดือนและปีที่อยู่ในรูปแบบ `ดด/ปปปป`
+3. นำฟังก์ชันนี้ไปใช้ในการจัดเรียง (Sort) ข้อมูลในกราฟเส้น (หัวข้อที่ 4) และใน Dropdown list ตัวกรองเดือนตั้งหนี้ เพื่อให้เรียงลำดับตามเวลา (Chronological) ได้อย่างถูกต้องครับ
