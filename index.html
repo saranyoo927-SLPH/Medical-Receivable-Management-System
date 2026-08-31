@@ -668,7 +668,7 @@ function renderKPIs() {
     document.getElementById('funnelContainer').innerHTML = `
         <div class="funnel-row f-row-bill"><div class="f-label">เรียกเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(db)}">${fmt(db)}</div></div></div>
         <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
-        <div class="funnel-row f-row-paid"><div class="f-label">รับชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
+        <div class="funnel-row f-row-paid"><div class="f-label">รับชดเชย </div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
         <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div><div class="f-val" style="display:${ou<db*0.15?'block':'none'}">${fmt(ou)}</div></div></div>
     `;
 
@@ -701,6 +701,50 @@ function parseMonthYear(myString) {
         }
     }
     return 0;
+}
+
+// ===== Age debt ordering =====
+// รองรับทั้งจำนวนวันตรง ๆ เช่น 0, 15, 120 และข้อความช่วง เช่น
+// "0-30 วัน", "31–60 วัน", "ไม่เกิน 30 วัน", "มากกว่า 180 วัน"
+// ค่าที่เป็นข้อผิดพลาด/ไม่ระบุจะถูกจัดไว้ท้ายสุด
+function ageSortKey(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw || raw === 'ไม่ระบุ') return Number.MAX_SAFE_INTEGER;
+
+    const s = raw
+        .replace(/,/g, '')
+        .replace(/[–—]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (/ต้องตรวจสอบ|#REF!|error|ผิดพลาด/i.test(s)) {
+        return Number.MAX_SAFE_INTEGER - 1;
+    }
+
+    // กรณีเป็นจำนวนวันเพียว ๆ
+    if (/^-?\d+(?:\.\d+)?$/.test(s)) {
+        return Number(s);
+    }
+
+    const nums = [...s.matchAll(/\d+(?:\.\d+)?/g)].map(m => Number(m[0]));
+    if (!nums.length) return Number.MAX_SAFE_INTEGER - 2;
+
+    // ช่วงอายุหนี้ ให้ใช้ขอบล่างเป็นลำดับ เช่น 31-60 => 31
+    if (s.includes('-') && nums.length >= 2) return Math.min(nums[0], nums[1]);
+
+    // "มากกว่า 180 วัน", "181 วันขึ้นไป", ">180"
+    if (/มากกว่า|เกิน|ขึ้นไป|>/i.test(s)) return nums[0] + 0.5;
+
+    // "ไม่เกิน 30 วัน", "≤30", "น้อยกว่า 30" ควรอยู่กลุ่มแรก ๆ
+    if (/ไม่เกิน|น้อยกว่า|ต่ำกว่า|<=|≤|</i.test(s)) return Math.max(0, nums[0] - 0.5);
+
+    return nums[0];
+}
+
+function compareAgeLabels(a, b) {
+    const diff = ageSortKey(a) - ageSortKey(b);
+    if (diff !== 0) return diff;
+    return String(a).localeCompare(String(b), 'th', { numeric: true, sensitivity: 'base' });
 }
 
 function renderCharts() {
@@ -739,8 +783,11 @@ function renderCharts() {
         { label: 'อัตราจัดเก็บ (%)', data: fundData.map(d => d.cp > 0 ? ((d.pd/d.cp)*100).toFixed(1) : 0), backgroundColor: COLORS.paid, borderRadius: 4 }
     ], { indexAxis: 'y' });
 
-    // 3. Aging
-    const ageData = aggData(FILTERED_DATA, 'ag');
+    // 3. Aging — เรียงช่วงอายุหนี้จากน้อยไปมากเสมอ
+    // ใช้ comparator เดียวกันทุกครั้งที่ renderCharts() ถูกเรียก
+    // จึงคงลำดับถูกต้องหลัง Refresh / Filter / Theme change
+    const ageData = aggData(FILTERED_DATA, 'ag')
+        .sort((a, b) => compareAgeLabels(a.name, b.name));
     renderChart('chAge', 'bar', ageData.map(d => d.name), [
         { label: 'ยอดคงเหลือ', data: ageData.map(d => d.ou), backgroundColor: COLORS.out, borderRadius: 4 }
     ]);
@@ -828,6 +875,9 @@ function populateFilters() {
         
         if (id === 'f-mon') {
              uniqueVals.sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
+        } else if (id === 'f-age') {
+             // ตัวกรองอายุหนี้ใช้ลำดับเดียวกับกราฟ: น้อย → มาก
+             uniqueVals.sort(compareAgeLabels);
         } else {
              uniqueVals.sort();
         }
