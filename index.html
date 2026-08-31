@@ -1,765 +1,113 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>แดชบอร์ดภาพรวมลูกหนี้ค่ารักษาพยาบาล ผู้ป่วยใน (IPD) — รพ.เสลภูมิ</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-/* ===== CSS Variables (Enterprise Standard Palette) ===== */
-:root {
-  /* Semantic Colors for Data */
-  --c-bill: #3b82f6; /* Blue - เรียกเก็บ */
-  --c-comp: #8b5cf6; /* Purple - ชดเชย */
-  --c-paid: #10b981; /* Green - จัดเก็บ/ชำระแล้ว */
-  --c-out: #f59e0b;  /* Orange - คงเหลือ */
-  
-  /* Light Theme (Default) */
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  
-  /* Typography & Layout */
-  --f-heading: 'Kanit', system-ui, sans-serif;
-  --f-body: 'IBM Plex Sans Thai', system-ui, sans-serif;
-  --radius: 12px;
-  --radius-sm: 8px;
-}
+/**
+ * Backend สำหรับ MRMS IPD Dashboard
+ * ผูกสคริปต์นี้กับ Google Sheets ไฟล์ทะเบียนลูกหนี้ แล้ว Deploy > New deployment > Web app
+ * Execute as: Me
+ * Who has access: Anyone
+ * จากนั้นนำ URL /exec ไปใส่ใน DATA_URL ของไฟล์ HTML
+ */
 
-/* Dark Theme Overrides */
-body.theme-dark {
-  --bg-main: #0f172a;
-  --bg-card: #1e293b;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-color: #334155;
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-}
+const TARGET_SHEET_NAME = 'ทะเบียนคุมลูกหนี้'; // ใช้ trim() จึงไม่ต้องกังวลช่องว่างท้ายชื่อชีต
 
-/* ===== Base Styles ===== */
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body {
-  font-family: var(--f-body);
-  color: var(--text-main);
-  background-color: var(--bg-main);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  min-height: 100vh;
-}
-h1, h2, h3, h4 { font-family: var(--f-heading); margin: 0; font-weight: 500; }
-.num { font-family: var(--f-heading); font-variant-numeric: tabular-nums; }
-.wrap { max-width: 1440px; margin: 0 auto; padding: 0 24px; }
+function doGet() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error('ไม่พบ Spreadsheet ที่ผูกกับ Apps Script');
 
-/* ===== Header ===== */
-header { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); padding: 16px 0; position: sticky; top: 0; z-index: 50; }
-.hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.hd .lft { display: flex; align-items: center; gap: 16px; }
-.crest {
-  width: 48px; height: 48px; border-radius: 10px; background: rgba(16, 185, 129, 0.1);
-  display: grid; place-items: center; border: 1px solid rgba(16, 185, 129, 0.2);
-}
-.crest svg { width: 24px; height: 24px; color: var(--c-paid); }
-.hd h1 { font-size: 20px; font-weight: 600; line-height: 1.2; }
-.hd .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--c-paid); margin-bottom: 2px; }
-.hd .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-.hd .rgt { display: flex; gap: 12px; align-items: center; }
-
-.status-box { text-align: right; font-size: 12px; color: var(--text-muted); }
-.status-box b { display: block; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
-.src { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; margin-top: 2px; }
-.src .dot { width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; }
-.src.live { color: var(--c-paid); } .src.warn { color: var(--c-out); }
-
-.btn {
-  font-family: var(--f-body); font-size: 13px; font-weight: 500;
-  background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main);
-  border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
-}
-.btn:hover { background: var(--border-color); }
-.btn svg { width: 16px; height: 16px; }
-#refreshBtn.spin svg { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===== Filters ===== */
-.filters { padding: 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; background-color: var(--bg-card); }
-.frow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
-.fg label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
-.fg select {
-  font-family: var(--f-body); font-size: 13.5px;
-  background-color: var(--bg-card); color: var(--text-main);
-  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
-  padding: 8px 32px 8px 12px; width: 100%; appearance: none; cursor: pointer;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
-  background-repeat: no-repeat; background-position: right 10px center;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: border-color 0.2s;
-}
-.fg select:focus { outline: none; border-color: var(--c-bill); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-.fclear { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; padding: 8px; border-radius: var(--radius-sm); transition: 0.2s; }
-.fclear:hover { background: var(--border-color); color: var(--text-main); }
-.fcount { margin-left: auto; font-size: 13px; color: var(--text-muted); padding: 8px 0; }
-.fcount b { color: var(--text-main); font-weight: 600; }
-
-/* ===== Main Grid & Cards ===== */
-main { padding-bottom: 60px; }
-.bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; margin-bottom: 20px; }
-.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
-
-.card {
-  background: var(--bg-card); border-radius: var(--radius);
-  border: 1px solid var(--border-color); box-shadow: var(--shadow-card);
-  padding: 20px; display: flex; flex-direction: column;
-  transition: box-shadow 0.2s ease;
-}
-.card:hover { box-shadow: var(--shadow-hover); }
-.card-header { margin-bottom: 16px; }
-.card-header h3 { font-size: 16px; font-weight: 600; color: var(--text-main); }
-.card-header p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-.chart-container { position: relative; flex: 1; min-height: 280px; width: 100%; }
-.chart-container.sm { min-height: 240px; }
-
-/* ===== KPI Cards ===== */
-.kpi-wrapper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
-.kpi {
-  background: var(--bg-card); border-radius: var(--radius);
-  border: 1px solid var(--border-color); box-shadow: var(--shadow-card);
-  padding: 20px; position: relative; overflow: hidden;
-}
-.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
-.kpi.k-bill::before { background-color: var(--c-bill); }
-.kpi.k-comp::before { background-color: var(--c-comp); }
-.kpi.k-paid::before { background-color: var(--c-paid); }
-.kpi.k-out::before { background-color: var(--c-out); }
-
-.kpi-title { font-size: 13px; font-weight: 500; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; }
-.kpi-title svg { width: 18px; height: 18px; opacity: 0.7; }
-.kpi-val { font-family: var(--f-heading); font-size: 32px; font-weight: 600; line-height: 1.2; margin: 12px 0 8px; letter-spacing: -0.5px; }
-.k-bill .kpi-val { color: var(--c-bill); }
-.k-comp .kpi-val { color: var(--c-comp); }
-.k-paid .kpi-val { color: var(--c-paid); }
-.k-out .kpi-val { color: var(--c-out); }
-.kpi-ctx { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-.kpi-ctx span { font-weight: 600; }
-
-/* ===== Insights Bar ===== */
-.insight-bar { display: flex; gap: 20px; margin-bottom: 24px; }
-.ins-card {
-  flex: 1; display: flex; align-items: center; gap: 16px; padding: 16px 20px;
-  background: var(--bg-card); border: 1px solid var(--border-color);
-  border-radius: var(--radius); box-shadow: var(--shadow-card);
-}
-.ins-card .ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; }
-.ins-card .tx { font-size: 14px; color: var(--text-muted); }
-.ins-card .tx b { color: var(--text-main); font-size: 16px; font-family: var(--f-heading); }
-.ins-rate .ic { background: rgba(16, 185, 129, 0.1); color: var(--c-paid); }
-.ins-warn .ic { background: rgba(245, 158, 11, 0.1); color: var(--c-out); }
-
-/* ===== Section Titles ===== */
-.sec-title { display: flex; align-items: center; gap: 12px; margin: 36px 0 20px; }
-.sec-title .badge {
-  background: var(--text-main); color: var(--bg-card); width: 28px; height: 28px;
-  border-radius: 8px; display: grid; place-items: center; font-family: var(--f-heading); font-weight: 600; font-size: 13px;
-}
-.sec-title h2 { font-size: 20px; color: var(--text-main); font-weight: 600; }
-.sec-title .hint { margin-left: auto; font-size: 13px; color: var(--text-muted); }
-
-/* ===== Table ===== */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
-table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: right; }
-thead th { background: var(--bg-main); padding: 14px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); white-space: nowrap; position: sticky; top: 0; z-index: 1;}
-thead th.l { text-align: left; }
-tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
-tbody td.l { text-align: left; }
-tbody tr:hover { background: var(--bg-main); }
-.tfoot td { padding: 14px 16px; font-weight: 600; background: var(--bg-main); border-top: 2px solid var(--border-color); }
-.tfoot td.l { text-align: left; }
-.progress-bar { height: 8px; border-radius: 4px; background: var(--border-color); width: 80px; display: inline-block; vertical-align: middle; margin-right: 8px; overflow: hidden; }
-.progress-bar i { display: block; height: 100%; border-radius: 4px; }
-
-/* ===== Empty State ===== */
-#emptyState {
-  grid-column: span 12; background: var(--bg-card); border: 1px dashed var(--border-color);
-  border-radius: var(--radius); padding: 60px 20px; text-align: center; display: none; flex-direction: column; align-items: center; justify-content: center;
-}
-#emptyState svg { width: 64px; height: 64px; color: var(--border-color); margin-bottom: 16px; }
-#emptyState h3 { font-size: 18px; color: var(--text-main); margin-bottom: 8px; }
-#emptyState p { color: var(--text-muted); font-size: 14px; }
-
-/* ===== Funnel Specifics ===== */
-.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.funnel-row:last-child { margin-bottom: 0; }
-.f-label { width: 80px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-muted); }
-.f-track { flex: 1; background: var(--bg-main); height: 32px; border-radius: 16px; position: relative; overflow: hidden; }
-.f-bar { height: 100%; border-radius: 16px; display: flex; align-items: center; padding: 0 16px; font-family: var(--f-heading); font-weight: 500; font-size: 14px; color: #fff; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); min-width: 15%; }
-.f-val { position: absolute; right: 16px; top: 0; bottom: 0; display: flex; align-items: center; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
-.f-row-bill .f-bar { background-color: var(--c-bill); }
-.f-row-comp .f-bar { background-color: var(--c-comp); }
-.f-row-paid .f-bar { background-color: var(--c-paid); }
-.f-row-out .f-bar { background-color: var(--c-out); }
-
-/* Custom Gauge Center */
-.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; top: 10px; pointer-events: none; }
-.gauge-center .g-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
-.gauge-center .g-val { font-family: var(--f-heading); font-size: 42px; font-weight: 600; color: var(--text-main); line-height: 1.1; margin-top: 4px; }
-
-/* Mobile Responsive */
-@media (max-width: 1024px) {
-  .kpi-wrapper { grid-template-columns: repeat(2, 1fr); }
-  .bento .c8, .bento .c4, .bento .c7, .bento .c5, .bento .c6 { grid-column: span 12; }
-  .insight-bar { flex-direction: column; gap: 12px; }
-}
-@media (max-width: 640px) {
-  .kpi-wrapper { grid-template-columns: 1fr; }
-  .hd h1 { font-size: 18px; }
-  .fcount { width: 100%; text-align: right; }
-}
-</style>
-</head>
-<body class="theme-light">
-<header>
-  <div class="wrap hd">
-    <div class="lft">
-      <div class="crest">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-      <div>
-        <div class="eyebrow">Accounts Receivable · Inpatient</div>
-        <h1>แดชบอร์ดภาพรวมลูกหนี้ค่ารักษาพยาบาล ผู้ป่วยใน (IPD)</h1>
-        <div class="sub">โรงพยาบาลเสลภูมิ จังหวัดร้อยเอ็ด · ภาพรวมการเรียกเก็บและการประมาณการชดเชยค่าบริการ</div>
-      </div>
-    </div>
-    <div class="rgt">
-      <div class="status-box">ข้อมูลอัปเดตล่าสุด<b id="latestDate">-</b><span class="src" id="syncStatus"><span class="dot"></span>กำลังเชื่อมต่อ...</span></div>
-      <button class="btn" id="refreshBtn"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"/></svg>รีเฟรช</button>
-      <button class="btn" id="themeBtn"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round"/></svg>สลับธีม</button>
-    </div>
-  </div>
-</header>
-
-<div class="filters">
-  <div class="wrap frow">
-    <div class="fg"><label>กลุ่มสิทธิ</label><select id="f-fund"><option value="">ทั้งหมด</option></select></div>
-    <div class="fg"><label>ช่วงอายุหนี้</label><select id="f-age"><option value="">ทั้งหมด</option></select></div>
-    <div class="fg"><label>สถานะการชำระ</label><select id="f-st"><option value="">ทั้งหมด</option></select></div>
-    <div class="fg"><label>เดือนตั้งหนี้</label><select id="f-mon"><option value="">ทั้งหมด</option></select></div>
-    <div class="fg"><label>สถานะการเคลม</label><select id="f-cl"><option value="">ทั้งหมด</option></select></div>
-    <button class="fclear" id="f-reset"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>ล้าง</button>
-    <div class="fcount">ครอบคลุม <b id="cnt-show">0</b> จาก <span id="cnt-all">0</span> รายการ</div>
-  </div>
-</div>
-
-<main class="wrap">
-  
-  <div id="dashboard-content">
-    <div class="insight-bar" id="insightBar"></div>
-    <div class="kpi-wrapper" id="kpis"></div>
-
-    <div class="sec-title"><div class="badge">1</div><h2>เส้นทางเงิน (Cashflow Funnel)</h2>
-      <span class="hint">วิเคราะห์การหดตัวของเม็ดเงิน ตั้งแต่เรียกเก็บจนถึงยอดคงเหลือ</span></div>
-    
-    <div class="bento">
-      <div class="card c8">
-        <div class="card-header">
-          <h3>ภาพรวมมูลค่าแต่ละขั้นตอน (บาท)</h3>
-        </div>
-        <div class="chart-container" id="funnelContainer" style="display:flex; flex-direction:column; justify-content:center; padding-right:20px;">
-          <!-- Funnel Injected Here -->
-        </div>
-      </div>
-      <div class="card c4">
-        <div class="card-header" style="text-align: center;">
-          <h3>อัตราการจัดเก็บรวม</h3>
-          <p>รับชำระแล้ว ÷ ประมาณการชดเชย</p>
-        </div>
-        <div class="chart-container sm">
-          <canvas id="chGauge"></canvas>
-          <div class="gauge-center">
-            <div class="g-lbl">COLLECTION RATE</div>
-            <div class="g-val num" id="gaugeVal">0%</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec-title"><div class="badge">2</div><h2>วิเคราะห์ตามกลุ่มสิทธิการเงิน (Top 10)</h2></div>
-    <div class="bento">
-      <div class="card c8">
-        <div class="card-header">
-          <h3>เปรียบเทียบ ภาระหนี้ · ประมาณการชดเชย · จัดเก็บ · คงเหลือ</h3>
-          <p>เรียงลำดับตามยอดคงเหลือสูงสุด</p>
-        </div>
-        <div class="chart-container"><canvas id="chFund"></canvas></div>
-      </div>
-      <div class="card c4">
-        <div class="card-header">
-          <h3>อัตราจัดเก็บตามกลุ่มสิทธิ (%)</h3>
-          <p>ประสิทธิภาพการเรียกเก็บเงินแต่ละสิทธิ</p>
-        </div>
-        <div class="chart-container"><canvas id="chRate"></canvas></div>
-      </div>
-      
-      <div class="card c12">
-        <div class="card-header">
-          <h3>ตารางสรุปข้อมูลรายกลุ่มสิทธิ</h3>
-        </div>
-        <div class="table-wrap" style="max-height: 400px;">
-          <table id="tblFund">
-            <thead>
-              <tr>
-                <th class="l">กลุ่มสิทธิการเงิน</th>
-                <th>จำนวนราย</th>
-                <th>ภาระหนี้ (เรียกเก็บ)</th>
-                <th>ประมาณการชดเชย</th>
-                <th>รับชำระแล้ว</th>
-                <th>ลูกหนี้คงเหลือ</th>
-                <th>อัตราจัดเก็บ (%)</th>
-              </tr>
-            </thead>
-            <tbody id="tblFundBody"></tbody>
-            <tfoot id="tblFundFoot"></tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec-title"><div class="badge">3</div><h2>โครงสร้างอายุหนี้ และ สถานะการเคลม</h2></div>
-    <div class="bento">
-      <div class="card c6">
-        <div class="card-header">
-          <h3>ยอดคงเหลือ แยกตามช่วงอายุหนี้</h3>
-          <p>วิเคราะห์ความเสี่ยงหนี้สูญ</p>
-        </div>
-        <div class="chart-container sm"><canvas id="chAge"></canvas></div>
-      </div>
-      <div class="card c6">
-        <div class="card-header">
-          <h3>ยอดคงเหลือตามงวด/สถานะการเคลม (Top 10)</h3>
-          <p>โฟกัสรายการที่รอ REP หรือค้างนาน</p>
-        </div>
-        <div class="chart-container sm"><canvas id="chClaim"></canvas></div>
-      </div>
-      <div class="card c12">
-        <div class="card-header">
-          <h3>แนวโน้มการตั้งหนี้และยอดค้างรับ แยกตามเดือน</h3>
-        </div>
-        <div class="chart-container sm"><canvas id="chMonth"></canvas></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="emptyState">
-    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <h3>ไม่พบข้อมูลที่ตรงกับเงื่อนไข</h3>
-    <p>โปรดลองเปลี่ยนหรือล้างตัวกรอง (Filters) ด้านบน เพื่อดูข้อมูลอื่น</p>
-  </div>
-
-</main>
-
-<script>
-/* ===== Configuration & State ===== */
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbzaOXfpHvN6UGV_nc-5Tm5QBKLGskYDET6fzoePRGub9VU5XhDDfZutxSlP7yMnCF1j/exec';
-
-let RAW_DATA = [];
-let FILTERED_DATA = [];
-let chartInstances = {};
-
-// Semantic Palette matching CSS
-const COLORS = {
-  bill: '#3b82f6',
-  comp: '#8b5cf6',
-  paid: '#10b981',
-  out:  '#f59e0b'
-};
-
-const fmt = (num) => new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(num || 0);
-
-// Global Chart Defaults for Clean Enterprise Look
-Chart.defaults.font.family = "'IBM Plex Sans Thai', system-ui, sans-serif";
-Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(17, 24, 39, 0.9)';
-Chart.defaults.plugins.tooltip.titleFont = { family: 'Kanit', size: 14, weight: 500 };
-Chart.defaults.plugins.tooltip.padding = 12;
-Chart.defaults.plugins.tooltip.cornerRadius = 8;
-Chart.defaults.plugins.legend.position = 'bottom';
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-Chart.defaults.plugins.legend.labels.boxWidth = 8;
-
-/* ===== Data Fetching ===== */
-async function fetchData() {
-    const statusEl = document.getElementById('syncStatus');
-    const btn = document.getElementById('refreshBtn');
-    statusEl.innerHTML = '<span class="dot" style="background:#f59e0b"></span>กำลังเชื่อมต่อ...';
-    btn.classList.add('spin');
-    
-    try {
-        const response = await fetch(DATA_URL);
-        if (!response.ok) throw new Error("HTTP Status " + response.status);
-        const rawResponse = await response.json();
-        
-        if (rawResponse && rawResponse.rows && Array.isArray(rawResponse.rows)) {
-            RAW_DATA = normalizeData(rawResponse.rows);
-            if (rawResponse.asOf) document.getElementById('latestDate').innerText = ' ' + rawResponse.asOf;
-        } else {
-             RAW_DATA = normalizeData(rawResponse);
-             const now = new Date();
-             document.getElementById('latestDate').innerText = ' ' + now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
-        }
-
-        if (RAW_DATA.length === 0) throw new Error("ข้อมูลว่างเปล่า");
-
-        statusEl.innerHTML = '<span class="dot" style="background:#10b981"></span>อัปเดตล่าสุด';
-        initDashboard();
-        
-    } catch (error) {
-        console.error("Fetch error:", error);
-        statusEl.innerHTML = '<span class="dot" style="background:#ef4444"></span>ข้อผิดพลาด: ' + error.message;
-    } finally {
-        setTimeout(() => btn.classList.remove('spin'), 500);
-    }
-}
-
-function normalizeData(rawData) {
-    if (!rawData) return [];
-    let arr = Array.isArray(rawData) ? rawData : (rawData.data || rawData.items || []);
-    
-    // จัดการข้อมูลกรณีมาจาก Google Sheets แบบ 2D Array
-    if (Array.isArray(arr[0])) {
-        const headers = arr[0];
-        arr = arr.slice(1).map(row => {
-            let obj = {};
-            headers.forEach((h, i) => obj[h] = row[i]);
-            return obj;
-        });
+    const sheet = ss.getSheets().find(s => s.getName().trim() === TARGET_SHEET_NAME);
+    if (!sheet) {
+      throw new Error('ไม่พบชีต "ทะเบียนคุมลูกหนี้" กรุณาตรวจสอบชื่อชีต');
     }
 
-    // ฟังก์ชันทำความสะอาดข้อความ (ลบช่องว่าง, อักขระพิเศษ, ทำให้เป็นตัวพิมพ์เล็ก)
-    const cleanStr = (str) => {
-        if (typeof str !== 'string') return '';
-        return str.replace(/\s+/g, '').replace(/[\(\)\[\]]/g, '').toLowerCase();
-    };
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 3) return jsonOutput({ ok: true, rows: [], asOf: formatNow() });
 
-    return arr.map(row => {
-        // ดึง keys ของ row มาทำความสะอาดครั้งเดียวเพื่อเปรียบเทียบ
-        const rowKeys = Object.keys(row);
-        const cleanRowKeys = rowKeys.map(k => cleanStr(k));
+    // อ่าน A:AE เพราะข้อมูลที่ Dashboard ใช้กระจายอยู่ถึงคอลัมน์ AE
+    // แถว 1 เป็นสรุปยอด และแถว 2 เป็นหัวตารางจริง จึงเริ่มอ่านที่แถว 2
+    const values = sheet.getRange(2, 1, lastRow - 1, 31).getValues();
+    const headers = values[0].map(v => String(v ?? '').trim());
 
-        const getVal = (targetKeys) => {
-            for (let tKey of targetKeys) { 
-                const cleanTKey = cleanStr(tKey);
-                const index = cleanRowKeys.indexOf(cleanTKey);
-                if (index !== -1) {
-                    const actualKey = rowKeys[index];
-                    if (row[actualKey] !== undefined && row[actualKey] !== null && row[actualKey] !== '') {
-                        return row[actualKey];
-                    }
-                }
-            }
-            return 'ไม่ระบุ';
-        };
-        
-        const num = (val) => {
-            if (typeof val === 'number') return val;
-            const parsed = parseFloat(String(val).replace(/,/g, ''));
-            return isNaN(parsed) ? 0 : parsed;
-        };
+    // ตรวจโครงสร้างเพื่อให้พบความผิดพลาดเร็ว หากมีการย้ายคอลัมน์ในอนาคต
+    const required = [
+      'ภาระหนี้ รอชำระ',
+      'ประมาณการชดเชย',
+      'รับชำระลูกหนี้',
+      'ลูกหนี้คงเหลือ',
+      'เดือนตั้งหนี้',
+      'สถานะการชำระเงิน',
+      'จำนวนวัน',
+      'สถานะการเคลม (ส่งผ่าน eclaim.)'
+    ];
+    const missing = required.filter(h => !headers.includes(h));
+    if (missing.length) {
+      throw new Error('หัวตารางไม่ตรง: ไม่พบ ' + missing.join(', '));
+    }
 
-        return {
-            fn: getVal(['กลุ่มสิทธิ', 'กลุ่มสิทธิการเงิน', 'fn', 'fund']),
-            // แมปชื่อใหม่ที่ลบช่องว่างและวงเล็บออกแล้ว
-            db: num(getVal(['ภาระหนี้ภาระหนี้รอชำระ', 'ภาระหนี้รอชำระ', 'ภาระหนี้', 'เรียกเก็บ', 'db'])),
-            cp: num(getVal(['ประมาณการชดเชย', 'ชดเชย', 'cp'])),
-            pd: num(getVal(['รับชำระแล้ว', 'รับชำระ', 'pd'])),
-            ou: num(getVal(['ลูกหนี้คงเหลือ', 'คงเหลือ', 'ou'])),
-            md: getVal(['เดือนตั้งหนี้', 'เดือน', 'md']),
-            st: getVal(['สถานะการชำระ', 'สถานะ', 'st']),
-            ag: getVal(['ช่วงอายุหนี้', 'อายุหนี้', 'ag']),
-            cl: getVal(['สถานะการเคลม', 'สถานะเคลม', 'cl', 'c1'])
-        };
+    const rows = [];
+    for (let i = 1; i < values.length; i++) {
+      const r = values[i];
+
+      // ตำแหน่งคอลัมน์ตามชีตปัจจุบัน:
+      // F=5, I=8, K=10, R=17, T=19, V=21, X=23, Y=24, AB=27, AE=30 (index เริ่ม 0)
+      const record = {
+        'สิทธรักษา': safeText(r[24]) || safeText(r[5]),
+        'ภาระหนี้ รอชำระ': safeNumber(r[8]),
+        'ประมาณการชดเชย': safeNumber(r[10]),
+        'รับชำระลูกหนี้': safeNumber(r[17]),
+        'ลูกหนี้คงเหลือ': safeNumber(r[19]),
+        'เดือนตั้งหนี้': safeText(r[21]),
+        'สถานะการชำระเงิน': safeText(r[23]),
+        'จำนวนวัน': safeText(r[27]),
+        'สถานะการเคลม (ส่งผ่าน eclaim.)': safeText(r[30])
+      };
+
+      const hasText = [
+        record['สิทธรักษา'], record['เดือนตั้งหนี้'], record['สถานะการชำระเงิน'],
+        record['จำนวนวัน'], record['สถานะการเคลม (ส่งผ่าน eclaim.)']
+      ].some(Boolean);
+      const hasMoney = [
+        record['ภาระหนี้ รอชำระ'], record['ประมาณการชดเชย'],
+        record['รับชำระลูกหนี้'], record['ลูกหนี้คงเหลือ']
+      ].some(v => v !== 0);
+
+      if (hasText || hasMoney) rows.push(record);
+    }
+
+    return jsonOutput({
+      ok: true,
+      sheet: sheet.getName(),
+      rowCount: rows.length,
+      asOf: formatNow(),
+      rows
     });
-}
 
-/* ===== Logic & Rendering ===== */
-function initDashboard() {
-    populateFilters();
-    updateDashboard();
-}
-
-function updateDashboard() {
-    FILTERED_DATA = RAW_DATA;
-    const keys = { 'f-fund': 'fn', 'f-age': 'ag', 'f-st': 'st', 'f-mon': 'md', 'f-cl': 'cl' };
-    for (const [id, key] of Object.entries(keys)) {
-        const val = document.getElementById(id).value;
-        if (val) FILTERED_DATA = FILTERED_DATA.filter(d => d[key] === val);
-    }
-    
-    document.getElementById('cnt-show').innerText = fmt(FILTERED_DATA.length);
-    document.getElementById('cnt-all').innerText = fmt(RAW_DATA.length);
-
-    if (FILTERED_DATA.length === 0) {
-        document.getElementById('dashboard-content').style.display = 'none';
-        document.getElementById('emptyState').style.display = 'flex';
-    } else {
-        document.getElementById('dashboard-content').style.display = 'block';
-        document.getElementById('emptyState').style.display = 'none';
-        renderKPIs();
-        renderCharts();
-        renderTable();
-    }
-}
-
-function renderKPIs() {
-    let db = 0, cp = 0, pd = 0, ou = 0;
-    FILTERED_DATA.forEach(r => { db += r.db; cp += r.cp; pd += r.pd; ou += r.ou; });
-
-    // KPI context percentages
-    const pComp = db > 0 ? ((cp/db)*100).toFixed(1) : 0;
-    const pPaid = cp > 0 ? ((pd/cp)*100).toFixed(1) : 0;
-    const pOut  = db > 0 ? ((ou/db)*100).toFixed(1) : 0;
-
-    document.getElementById('kpis').innerHTML = `
-        <div class="kpi k-bill">
-            <div class="kpi-title">ภาระหนี้ (เรียกเก็บ) <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-            <div class="kpi-val num">${fmt(db)}</div>
-            <div class="kpi-ctx"><span>100%</span> ของยอดตั้งต้นทั้งหมด</div>
-        </div>
-        <div class="kpi k-comp">
-            <div class="kpi-title">ประมาณการชดเชย <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg></div>
-            <div class="kpi-val num">${fmt(cp)}</div>
-            <div class="kpi-ctx">คิดเป็น <span>${pComp}%</span> ของยอดเรียกเก็บ</div>
-        </div>
-        <div class="kpi k-paid">
-            <div class="kpi-title">รับชำระแล้ว <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="kpi-val num">${fmt(pd)}</div>
-            <div class="kpi-ctx">คิดเป็น <span>${pPaid}%</span> ของประมาณการชดเชย</div>
-        </div>
-        <div class="kpi k-out">
-            <div class="kpi-title">ลูกหนี้คงเหลือ <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-            <div class="kpi-val num">${fmt(ou)}</div>
-            <div class="kpi-ctx">คิดเป็น <span>${pOut}%</span> ของยอดเรียกเก็บ</div>
-        </div>
-    `;
-
-    document.getElementById('insightBar').innerHTML = `
-        <div class="ins-card ins-rate">
-            <div class="ic"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-            <div class="tx">อัตราการจัดเก็บรวมเทียบประมาณการชดเชย: <b class="num">${pPaid}%</b></div>
-        </div>
-        <div class="ins-card ins-warn">
-            <div class="ic"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
-            <div class="tx">ยอดลูกหนี้คงเหลือรวมทั้งหมด: <b class="num">${fmt(ou)} บาท</b></div>
-        </div>
-    `;
-
-    // Funnel Update
-    const maxVal = Math.max(db, cp, pd, ou, 1);
-    const getW = (v) => Math.max((v / maxVal) * 100, 5) + '%';
-    
-    document.getElementById('funnelContainer').innerHTML = `
-        <div class="funnel-row f-row-bill"><div class="f-label">เรียกเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(db)}">${fmt(db)}</div></div></div>
-        <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
-        <div class="funnel-row f-row-paid"><div class="f-label">จัดเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
-        <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div><div class="f-val" style="display:${ou<db*0.15?'block':'none'}">${fmt(ou)}</div></div></div>
-    `;
-
-    document.getElementById('gaugeVal').innerText = pPaid + '%';
-    drawGauge(pPaid);
-}
-
-function aggData(data, keyField, limit = 0) {
-    const map = {};
-    data.forEach(r => {
-        const k = r[keyField];
-        if (!map[k]) map[k] = { name: k, db: 0, cp: 0, pd: 0, ou: 0, count: 0 };
-        map[k].db += r.db; map[k].cp += r.cp; map[k].pd += r.pd; map[k].ou += r.ou; map[k].count++;
+  } catch (err) {
+    return jsonOutput({
+      ok: false,
+      error: err && err.message ? err.message : String(err),
+      asOf: formatNow(),
+      rows: []
     });
-    let arr = Object.values(map).sort((a, b) => b.ou - a.ou);
-    if (limit > 0) arr = arr.slice(0, limit);
-    return arr;
+  }
 }
 
-// ฟังก์ชันแปลงรูปแบบ "ดด/ปปปป" เป็นรูปแบบที่เรียงลำดับได้
-function parseMonthYear(myString) {
-    if (!myString || myString === 'ไม่ระบุ') return 0;
-    const parts = myString.split('/');
-    if (parts.length === 2) {
-        const m = parseInt(parts[0], 10);
-        const y = parseInt(parts[1], 10);
-        if (!isNaN(m) && !isNaN(y)) {
-             return (y * 100) + m;
-        }
-    }
-    return 0;
+function safeText(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).trim();
+  return s === '#REF!' ? 'ต้องตรวจสอบสูตรอายุหนี้' : s;
 }
 
-function renderCharts() {
-    const isDark = document.body.classList.contains('theme-dark');
-    const tColor = isDark ? '#94a3b8' : '#6b7280';
-    const gridColor = isDark ? '#334155' : '#e5e7eb';
-    Chart.defaults.color = tColor;
-
-    const renderChart = (id, type, labels, datasets, options = {}) => {
-        if (chartInstances[id]) chartInstances[id].destroy();
-        const ctx = document.getElementById(id).getContext('2d');
-        chartInstances[id] = new Chart(ctx, {
-            type, data: { labels, datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: type === 'doughnut' ? {} : {
-                    y: { grid: { color: gridColor }, border: { dash: [4, 4] } },
-                    x: { grid: { display: false } }
-                },
-                ...options
-            }
-        });
-    };
-
-    // 1. Fund Chart
-    const fundData = aggData(FILTERED_DATA, 'fn', 10);
-    renderChart('chFund', 'bar', fundData.map(d => d.name.length > 20 ? d.name.substring(0,20)+'...' : d.name), [
-        { label: 'ภาระหนี้', data: fundData.map(d => d.db), backgroundColor: COLORS.bill, borderRadius: 4 },
-        { label: 'ประมาณการชดเชย', data: fundData.map(d => d.cp), backgroundColor: COLORS.comp, borderRadius: 4 },
-        { label: 'รับชำระ', data: fundData.map(d => d.pd), backgroundColor: COLORS.paid, borderRadius: 4 },
-        { label: 'คงเหลือ', data: fundData.map(d => d.ou), backgroundColor: COLORS.out, borderRadius: 4 }
-    ]);
-
-    // 2. Collection Rate by Fund
-    renderChart('chRate', 'bar', fundData.map(d => d.name.length > 15 ? d.name.substring(0,15)+'...' : d.name), [
-        { label: 'อัตราจัดเก็บ (%)', data: fundData.map(d => d.cp > 0 ? ((d.pd/d.cp)*100).toFixed(1) : 0), backgroundColor: COLORS.paid, borderRadius: 4 }
-    ], { indexAxis: 'y' });
-
-    // 3. Aging
-    const ageData = aggData(FILTERED_DATA, 'ag');
-    renderChart('chAge', 'bar', ageData.map(d => d.name), [
-        { label: 'ยอดคงเหลือ', data: ageData.map(d => d.ou), backgroundColor: COLORS.out, borderRadius: 4 }
-    ]);
-
-    // 4. Claims (Top 10)
-    const claimData = aggData(FILTERED_DATA, 'cl', 10);
-    renderChart('chClaim', 'bar', claimData.map(d => d.name.length > 15 ? d.name.substring(0,15)+'...' : d.name), [
-        { label: 'คงเหลือ (รอเคลม)', data: claimData.map(d => d.ou), backgroundColor: COLORS.comp, borderRadius: 4 }
-    ]);
-
-    // 5. Monthly Trend
-    let monthData = aggData(FILTERED_DATA, 'md').sort((a, b) => {
-        return parseMonthYear(a.name) - parseMonthYear(b.name);
-    });
-    
-    renderChart('chMonth', 'line', monthData.map(d => d.name), [
-        { label: 'ภาระหนี้ตั้งต้น', data: monthData.map(d => d.db), borderColor: COLORS.bill, backgroundColor: COLORS.bill, tension: 0.3 },
-        { label: 'ยอดคงเหลือปัจจุบัน', data: monthData.map(d => d.ou), borderColor: COLORS.out, backgroundColor: COLORS.out, tension: 0.3 }
-    ]);
+function safeNumber(v) {
+  if (typeof v === 'number' && isFinite(v)) return v;
+  const n = Number(String(v ?? '').replace(/,/g, '').trim());
+  return isFinite(n) ? n : 0;
 }
 
-function drawGauge(rate) {
-    const isDark = document.body.classList.contains('theme-dark');
-    const bg = isDark ? '#334155' : '#e5e7eb';
-    const val = Math.min(rate, 100);
-    const rem = 100 - val;
-    
-    if (chartInstances['chGauge']) chartInstances['chGauge'].destroy();
-    const ctx = document.getElementById('chGauge').getContext('2d');
-    chartInstances['chGauge'] = new Chart(ctx, {
-        type: 'doughnut',
-        data: { datasets: [{ data: [val, rem], backgroundColor: [COLORS.paid, bg], borderWidth: 0 }] },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            rotation: -90, circumference: 180, cutout: '75%',
-            plugins: { tooltip: { enabled: false }, legend: { display: false } }
-        }
-    });
+function jsonOutput(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function renderTable() {
-    const tbody = document.getElementById('tblFundBody');
-    const tfoot = document.getElementById('tblFundFoot');
-    const fundData = aggData(FILTERED_DATA, 'fn');
-    
-    let sumDb = 0, sumCp = 0, sumPd = 0, sumOu = 0, sumCnt = 0;
-    
-    tbody.innerHTML = fundData.map(d => {
-        sumDb += d.db; sumCp += d.cp; sumPd += d.pd; sumOu += d.ou; sumCnt += d.count;
-        const rate = d.cp > 0 ? (d.pd / d.cp) * 100 : 0;
-        const w = Math.min(rate, 100);
-        return `
-            <tr>
-                <td class="l">${d.name}</td>
-                <td class="num">${fmt(d.count)}</td>
-                <td class="num">${fmt(d.db)}</td>
-                <td class="num">${fmt(d.cp)}</td>
-                <td class="num" style="color:var(--c-paid); font-weight:500;">${fmt(d.pd)}</td>
-                <td class="num" style="color:${d.ou > 0 ? 'var(--c-out)' : 'inherit'}; font-weight:${d.ou > 0 ? '500' : 'normal'};">${fmt(d.ou)}</td>
-                <td class="l"><div class="progress-bar"><i style="width:${w}%; background:${w >= 100 ? 'var(--c-paid)' : 'var(--c-bill)'}"></i></div><span class="num">${rate.toFixed(1)}%</span></td>
-            </tr>
-        `;
-    }).join('');
-
-    const totalRate = sumCp > 0 ? (sumPd / sumCp) * 100 : 0;
-    tfoot.innerHTML = `
-        <tr>
-            <td class="l">รวมทั้งหมด</td>
-            <td class="num">${fmt(sumCnt)}</td>
-            <td class="num">${fmt(sumDb)}</td>
-            <td class="num">${fmt(sumCp)}</td>
-            <td class="num" style="color:var(--c-paid)">${fmt(sumPd)}</td>
-            <td class="num" style="color:var(--c-out)">${fmt(sumOu)}</td>
-            <td class="num">${totalRate.toFixed(1)}%</td>
-        </tr>
-    `;
+function formatNow() {
+  return Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm');
 }
-
-function populateFilters() {
-    const keys = { 'f-fund': 'fn', 'f-age': 'ag', 'f-st': 'st', 'f-mon': 'md', 'f-cl': 'cl' };
-    for (const [id, key] of Object.entries(keys)) {
-        const select = document.getElementById(id);
-        let uniqueVals = [...new Set(RAW_DATA.map(d => d[key]))].filter(v => v !== 'ไม่ระบุ');
-        
-        if (id === 'f-mon') {
-             uniqueVals.sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
-        } else {
-             uniqueVals.sort();
-        }
-
-        const currentVal = select.value;
-        select.innerHTML = '<option value="">ทั้งหมด</option>' + uniqueVals.map(v => `<option value="${v}">${v}</option>`).join('');
-        if (uniqueVals.includes(currentVal)) select.value = currentVal;
-        
-        if(!select.dataset.bound){
-            select.addEventListener('change', updateDashboard);
-            select.dataset.bound = 'true';
-        }
-    }
-}
-
-document.getElementById('f-reset').addEventListener('click', () => {
-    ['f-fund', 'f-age', 'f-st', 'f-mon', 'f-cl'].forEach(id => document.getElementById(id).value = '');
-    updateDashboard();
-});
-
-document.getElementById('refreshBtn').addEventListener('click', fetchData);
-
-document.getElementById('themeBtn').addEventListener('click', () => {
-    const isDark = document.body.classList.toggle('theme-dark');
-    document.body.classList.toggle('theme-light', !isDark);
-    if (FILTERED_DATA.length > 0) {
-        renderCharts();
-        const rate = FILTERED_DATA.reduce((s,r)=>s+r.cp,0) > 0 ? (FILTERED_DATA.reduce((s,r)=>s+r.pd,0)/FILTERED_DATA.reduce((s,r)=>s+r.cp,0))*100 : 0;
-        drawGauge(rate);
-    }
-});
-
-document.addEventListener('DOMContentLoaded', fetchData);
-</script>
-</body>
-</html>
-```eof
