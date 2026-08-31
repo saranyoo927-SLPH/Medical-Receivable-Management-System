@@ -665,11 +665,12 @@ function renderKPIs() {
     const maxVal = Math.max(db, cp, pd, ou, 1);
     const getW = (v) => Math.max((v / maxVal) * 100, 5) + '%';
     
+    // แสดงตัวเลขเพียง 1 จุดต่อแท่ง เพื่อไม่ให้เกิดยอดซ้ำเมื่อแท่งสั้น
     document.getElementById('funnelContainer').innerHTML = `
         <div class="funnel-row f-row-bill"><div class="f-label">เรียกเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(db)}">${fmt(db)}</div></div></div>
-        <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
-        <div class="funnel-row f-row-paid"><div class="f-label">รับชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
-        <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div><div class="f-val" style="display:${ou<db*0.15?'block':'none'}">${fmt(ou)}</div></div></div>
+        <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div></div></div>
+        <div class="funnel-row f-row-paid"><div class="f-label">รับชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div></div></div>
+        <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div></div></div>
     `;
 
     document.getElementById('gaugeVal').innerText = pPaid + '%';
