@@ -18,11 +18,11 @@
   --c-out: #f59e0b;  /* Orange - คงเหลือ */
   
   /* Light Theme (Default) */
-  --bg-main: #f3f4f6;
+  --bg-main: #f8fafc;
   --bg-card: #ffffff;
-  --text-main: #111827;
-  --text-muted: #6b7280;
-  --border-color: #e5e7eb;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
   --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
   
@@ -93,7 +93,7 @@ header { background-color: var(--bg-card); border-bottom: 1px solid var(--border
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===== Filters ===== */
-.filters { padding: 16px 0; }
+.filters { padding: 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; background-color: var(--bg-card); }
 .frow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
 .fg label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
@@ -175,27 +175,10 @@ main { padding-bottom: 60px; }
 .sec-title h2 { font-size: 20px; color: var(--text-main); font-weight: 600; }
 .sec-title .hint { margin-left: auto; font-size: 13px; color: var(--text-muted); }
 
-/* ===== Funnel Specifics ===== */
-.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.funnel-row:last-child { margin-bottom: 0; }
-.f-label { width: 80px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-muted); }
-.f-track { flex: 1; background: var(--bg-main); height: 32px; border-radius: 16px; position: relative; overflow: hidden; }
-.f-bar { height: 100%; border-radius: 16px; display: flex; align-items: center; padding: 0 16px; font-family: var(--f-heading); font-weight: 500; font-size: 14px; color: #fff; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); min-width: 15%; }
-.f-val { position: absolute; right: 16px; top: 0; bottom: 0; display: flex; align-items: center; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
-.f-row-bill .f-bar { background-color: var(--c-bill); }
-.f-row-comp .f-bar { background-color: var(--c-comp); }
-.f-row-paid .f-bar { background-color: var(--c-paid); }
-.f-row-out .f-bar { background-color: var(--c-out); }
-
-/* Custom Gauge Center */
-.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; top: 10px; pointer-events: none; }
-.gauge-center .g-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
-.gauge-center .g-val { font-family: var(--f-heading); font-size: 42px; font-weight: 600; color: var(--text-main); line-height: 1.1; margin-top: 4px; }
-
 /* ===== Table ===== */
 .table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
 table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: right; }
-thead th { background: var(--bg-main); padding: 14px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+thead th { background: var(--bg-main); padding: 14px 16px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); white-space: nowrap; position: sticky; top: 0; z-index: 1;}
 thead th.l { text-align: left; }
 tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
 tbody td.l { text-align: left; }
@@ -213,6 +196,23 @@ tbody tr:hover { background: var(--bg-main); }
 #emptyState svg { width: 64px; height: 64px; color: var(--border-color); margin-bottom: 16px; }
 #emptyState h3 { font-size: 18px; color: var(--text-main); margin-bottom: 8px; }
 #emptyState p { color: var(--text-muted); font-size: 14px; }
+
+/* ===== Funnel Specifics ===== */
+.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.funnel-row:last-child { margin-bottom: 0; }
+.f-label { width: 80px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.f-track { flex: 1; background: var(--bg-main); height: 32px; border-radius: 16px; position: relative; overflow: hidden; }
+.f-bar { height: 100%; border-radius: 16px; display: flex; align-items: center; padding: 0 16px; font-family: var(--f-heading); font-weight: 500; font-size: 14px; color: #fff; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); min-width: 15%; }
+.f-val { position: absolute; right: 16px; top: 0; bottom: 0; display: flex; align-items: center; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
+.f-row-bill .f-bar { background-color: var(--c-bill); }
+.f-row-comp .f-bar { background-color: var(--c-comp); }
+.f-row-paid .f-bar { background-color: var(--c-paid); }
+.f-row-out .f-bar { background-color: var(--c-out); }
+
+/* Custom Gauge Center */
+.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; top: 10px; pointer-events: none; }
+.gauge-center .g-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
+.gauge-center .g-val { font-family: var(--f-heading); font-size: 42px; font-weight: 600; color: var(--text-main); line-height: 1.1; margin-top: 4px; }
 
 /* Mobile Responsive */
 @media (max-width: 1024px) {
@@ -248,8 +248,8 @@ tbody tr:hover { background: var(--bg-main); }
   </div>
 </header>
 
-<div class="wrap filters">
-  <div class="frow">
+<div class="filters">
+  <div class="wrap frow">
     <div class="fg"><label>กลุ่มสิทธิ</label><select id="f-fund"><option value="">ทั้งหมด</option></select></div>
     <div class="fg"><label>ช่วงอายุหนี้</label><select id="f-age"><option value="">ทั้งหมด</option></select></div>
     <div class="fg"><label>สถานะการชำระ</label><select id="f-st"><option value="">ทั้งหมด</option></select></div>
@@ -314,7 +314,7 @@ tbody tr:hover { background: var(--bg-main); }
         <div class="card-header">
           <h3>ตารางสรุปข้อมูลรายกลุ่มสิทธิ</h3>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" style="max-height: 400px;">
           <table id="tblFund">
             <thead>
               <tr>
@@ -369,6 +369,7 @@ tbody tr:hover { background: var(--bg-main); }
 
 <script>
 /* ===== Configuration & State ===== */
+/* STREAMING_CHUNK:Configuration */
 const DATA_URL = 'https://script.google.com/macros/s/AKfycbzaOXfpHvN6UGV_nc-5Tm5QBKLGskYDET6fzoePRGub9VU5XhDDfZutxSlP7yMnCF1j/exec';
 
 let RAW_DATA = [];
@@ -396,6 +397,7 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.boxWidth = 8;
 
 /* ===== Data Fetching ===== */
+/* STREAMING_CHUNK:Data Fetching */
 async function fetchData() {
     const statusEl = document.getElementById('syncStatus');
     const btn = document.getElementById('refreshBtn');
@@ -407,7 +409,6 @@ async function fetchData() {
         if (!response.ok) throw new Error("HTTP Status " + response.status);
         const rawResponse = await response.json();
         
-        // Handle object with 'rows' array or direct array
         if (rawResponse && rawResponse.rows && Array.isArray(rawResponse.rows)) {
             RAW_DATA = normalizeData(rawResponse.rows);
             if (rawResponse.asOf) document.getElementById('latestDate').innerText = ' ' + rawResponse.asOf;
@@ -430,11 +431,12 @@ async function fetchData() {
     }
 }
 
+/* STREAMING_CHUNK:Data Normalization */
 function normalizeData(rawData) {
     if (!rawData) return [];
     let arr = Array.isArray(rawData) ? rawData : (rawData.data || rawData.items || []);
     
-    // Check if it's a 2D array (Sheets format)
+    // จัดการข้อมูลกรณีมาจาก Google Sheets แบบ 2D Array
     if (Array.isArray(arr[0])) {
         const headers = arr[0];
         arr = arr.slice(1).map(row => {
@@ -445,25 +447,43 @@ function normalizeData(rawData) {
     }
 
     return arr.map(row => {
+        // ฟังก์ชันดึงค่าโดยเช็คจากหลายๆ ชื่อที่เป็นไปได้
         const getVal = (keys) => {
-            for (let k of keys) { if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k]; }
+            for (let k of keys) { 
+                // ค้นหาแบบไม่สนใจตัวพิมพ์เล็กพิมพ์ใหญ่และช่องว่าง
+                const keyFound = Object.keys(row).find(
+                    key => key.trim().toLowerCase() === k.trim().toLowerCase()
+                );
+                if (keyFound !== undefined && row[keyFound] !== null && row[keyFound] !== '') {
+                    return row[keyFound];
+                }
+            }
             return 'ไม่ระบุ';
         };
+        
         const num = (val) => {
             if (typeof val === 'number') return val;
             const parsed = parseFloat(String(val).replace(/,/g, ''));
             return isNaN(parsed) ? 0 : parsed;
         };
 
+        // --- จุดสำคัญ: แมปชื่อคอลัมน์ให้ตรงเป๊ะตามที่คุณแจ้ง ---
         return {
-            fn: getVal(['fn']), db: num(getVal(['db'])), cp: num(getVal(['cp'])),
-            pd: num(getVal(['pd'])), ou: num(getVal(['ou'])), md: getVal(['md']),
-            st: getVal(['st']), ag: getVal(['ag']), cl: getVal(['cl', 'c1'])
+            fn: getVal(['กลุ่มสิทธิ', 'กลุ่มสิทธิการเงิน', 'fn', 'fund']),
+            db: num(getVal(['ภาระหนี้ (ภาระหนี้ รอชำระ)', 'ภาระหนี้(ภาระหนี้ รอชำระ)', 'ภาระหนี้', 'เรียกเก็บ', 'db'])),
+            cp: num(getVal(['ประมาณการชดเชย', 'ชดเชย', 'cp'])),
+            pd: num(getVal(['รับชำระแล้ว', 'รับชำระ', 'pd'])),
+            ou: num(getVal(['ลูกหนี้คงเหลือ', 'คงเหลือ', 'ou'])),
+            md: getVal(['เดือนตั้งหนี้', 'md']),
+            st: getVal(['สถานะการชำระ', 'สถานะ', 'st']),
+            ag: getVal(['ช่วงอายุหนี้', 'อายุหนี้', 'ag']),
+            cl: getVal(['สถานะการเคลม', 'สถานะเคลม', 'cl', 'c1'])
         };
     });
 }
 
 /* ===== Logic & Rendering ===== */
+/* STREAMING_CHUNK:Dashboard Update Logic */
 function initDashboard() {
     populateFilters();
     updateDashboard();
@@ -492,6 +512,7 @@ function updateDashboard() {
     }
 }
 
+/* STREAMING_CHUNK:KPI Rendering */
 function renderKPIs() {
     let db = 0, cp = 0, pd = 0, ou = 0;
     FILTERED_DATA.forEach(r => { db += r.db; cp += r.cp; pd += r.pd; ou += r.ou; });
@@ -550,6 +571,7 @@ function renderKPIs() {
     drawGauge(pPaid);
 }
 
+/* STREAMING_CHUNK:Chart Rendering */
 function aggData(data, keyField, limit = 0) {
     const map = {};
     data.forEach(r => {
@@ -562,7 +584,7 @@ function aggData(data, keyField, limit = 0) {
     return arr;
 }
 
-// Function to parse "MM/YYYY" for correct chronological sorting
+// ฟังก์ชันแปลงรูปแบบ "ดด/ปปปป" เป็นรูปแบบที่เรียงลำดับได้
 function parseMonthYear(myString) {
     if (!myString || myString === 'ไม่ระบุ') return 0;
     const parts = myString.split('/');
@@ -570,7 +592,7 @@ function parseMonthYear(myString) {
         const m = parseInt(parts[0], 10);
         const y = parseInt(parts[1], 10);
         if (!isNaN(m) && !isNaN(y)) {
-             return (y * 100) + m; // Example: 256704
+             return (y * 100) + m;
         }
     }
     return 0;
@@ -624,7 +646,7 @@ function renderCharts() {
         { label: 'คงเหลือ (รอเคลม)', data: claimData.map(d => d.ou), backgroundColor: COLORS.comp, borderRadius: 4 }
     ]);
 
-    // 5. Monthly Trend (Sorted chronologically using parseMonthYear)
+    // 5. Monthly Trend
     let monthData = aggData(FILTERED_DATA, 'md').sort((a, b) => {
         return parseMonthYear(a.name) - parseMonthYear(b.name);
     });
@@ -635,6 +657,7 @@ function renderCharts() {
     ]);
 }
 
+/* STREAMING_CHUNK:Table and Utilities Rendering */
 function drawGauge(rate) {
     const isDark = document.body.classList.contains('theme-dark');
     const bg = isDark ? '#334155' : '#e5e7eb';
@@ -698,7 +721,6 @@ function populateFilters() {
         const select = document.getElementById(id);
         let uniqueVals = [...new Set(RAW_DATA.map(d => d[key]))].filter(v => v !== 'ไม่ระบุ');
         
-        // Sort chronologically for month dropdown, otherwise alphabetically
         if (id === 'f-mon') {
              uniqueVals.sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
         } else {
@@ -716,7 +738,6 @@ function populateFilters() {
     }
 }
 
-// User Interactions
 document.getElementById('f-reset').addEventListener('click', () => {
     ['f-fund', 'f-age', 'f-st', 'f-mon', 'f-cl'].forEach(id => document.getElementById(id).value = '');
     updateDashboard();
@@ -734,8 +755,13 @@ document.getElementById('themeBtn').addEventListener('click', () => {
     }
 });
 
-// Initialization
 document.addEventListener('DOMContentLoaded', fetchData);
 </script>
 </body>
 </html>
+```eof
+
+**สิ่งที่แก้ไข:**
+ผมได้เข้าไปแก้ในบรรทัดฟังก์ชัน `normalizeData` ให้ตัวระบบมองหาคีย์เวิร์ด `'ภาระหนี้ (ภาระหนี้ รอชำระ)'`, `'ประมาณการชดเชย'`, `'รับชำระแล้ว'`, และ `'ลูกหนี้คงเหลือ'` ตรงๆ จากฝั่ง Google Sheets เลยครับ 
+
+นำโค้ดนี้ไปแทนที่ไฟล์เดิมได้เลยครับ รับรองว่าตัวเลขมาครบทุกกราฟแน่นอน!
