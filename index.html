@@ -297,7 +297,7 @@ tbody tr:hover { background: var(--bg-main); }
     <div class="bento">
       <div class="card c8">
         <div class="card-header">
-          <h3>เปรียบเทียบ ภาระหนี้ · ประมาณการชดเชย · จัดเก็บ · คงเหลือ</h3>
+          <h3>เปรียบเทียบ ภาระหนี้ · ประมาณการชดเชย · รับชดเชย · คงเหลือ</h3>
           <p>เรียงลำดับตามยอดคงเหลือสูงสุด</p>
         </div>
         <div class="chart-container"><canvas id="chFund"></canvas></div>
@@ -668,7 +668,7 @@ function renderKPIs() {
     document.getElementById('funnelContainer').innerHTML = `
         <div class="funnel-row f-row-bill"><div class="f-label">เรียกเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(db)}">${fmt(db)}</div></div></div>
         <div class="funnel-row f-row-comp"><div class="f-label">ประมาณการชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(cp)}">${fmt(cp)}</div><div class="f-val" style="display:${cp<db*0.15?'block':'none'}">${fmt(cp)}</div></div></div>
-        <div class="funnel-row f-row-paid"><div class="f-label">จัดเก็บ</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
+        <div class="funnel-row f-row-paid"><div class="f-label">รับชดเชย</div><div class="f-track"><div class="f-bar" style="width:${getW(pd)}">${fmt(pd)}</div><div class="f-val" style="display:${pd<db*0.15?'block':'none'}">${fmt(pd)}</div></div></div>
         <div class="funnel-row f-row-out"><div class="f-label">คงเหลือ</div><div class="f-track"><div class="f-bar" style="width:${getW(ou)}">${fmt(ou)}</div><div class="f-val" style="display:${ou<db*0.15?'block':'none'}">${fmt(ou)}</div></div></div>
     `;
 
