@@ -175,6 +175,23 @@ main { padding-bottom: 60px; }
 .sec-title h2 { font-size: 20px; color: var(--text-main); font-weight: 600; }
 .sec-title .hint { margin-left: auto; font-size: 13px; color: var(--text-muted); }
 
+/* ===== Funnel Specifics ===== */
+.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.funnel-row:last-child { margin-bottom: 0; }
+.f-label { width: 80px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.f-track { flex: 1; background: var(--bg-main); height: 32px; border-radius: 16px; position: relative; overflow: hidden; }
+.f-bar { height: 100%; border-radius: 16px; display: flex; align-items: center; padding: 0 16px; font-family: var(--f-heading); font-weight: 500; font-size: 14px; color: #fff; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); min-width: 15%; }
+.f-val { position: absolute; right: 16px; top: 0; bottom: 0; display: flex; align-items: center; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
+.f-row-bill .f-bar { background-color: var(--c-bill); }
+.f-row-comp .f-bar { background-color: var(--c-comp); }
+.f-row-paid .f-bar { background-color: var(--c-paid); }
+.f-row-out .f-bar { background-color: var(--c-out); }
+
+/* Custom Gauge Center */
+.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; top: 10px; pointer-events: none; }
+.gauge-center .g-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
+.gauge-center .g-val { font-family: var(--f-heading); font-size: 42px; font-weight: 600; color: var(--text-main); line-height: 1.1; margin-top: 4px; }
+
 /* ===== Table ===== */
 .table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
 table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: right; }
@@ -196,23 +213,6 @@ tbody tr:hover { background: var(--bg-main); }
 #emptyState svg { width: 64px; height: 64px; color: var(--border-color); margin-bottom: 16px; }
 #emptyState h3 { font-size: 18px; color: var(--text-main); margin-bottom: 8px; }
 #emptyState p { color: var(--text-muted); font-size: 14px; }
-
-/* ===== Funnel Specifics ===== */
-.funnel-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.funnel-row:last-child { margin-bottom: 0; }
-.f-label { width: 80px; text-align: right; font-size: 13px; font-weight: 500; color: var(--text-muted); }
-.f-track { flex: 1; background: var(--bg-main); height: 32px; border-radius: 16px; position: relative; overflow: hidden; }
-.f-bar { height: 100%; border-radius: 16px; display: flex; align-items: center; padding: 0 16px; font-family: var(--f-heading); font-weight: 500; font-size: 14px; color: #fff; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); min-width: 15%; }
-.f-val { position: absolute; right: 16px; top: 0; bottom: 0; display: flex; align-items: center; font-family: var(--f-heading); font-size: 14px; color: var(--text-main); font-weight: 500; }
-.f-row-bill .f-bar { background-color: var(--c-bill); }
-.f-row-comp .f-bar { background-color: var(--c-comp); }
-.f-row-paid .f-bar { background-color: var(--c-paid); }
-.f-row-out .f-bar { background-color: var(--c-out); }
-
-/* Custom Gauge Center */
-.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; top: 10px; pointer-events: none; }
-.gauge-center .g-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; }
-.gauge-center .g-val { font-family: var(--f-heading); font-size: 42px; font-weight: 600; color: var(--text-main); line-height: 1.1; margin-top: 4px; }
 
 /* Mobile Responsive */
 @media (max-width: 1024px) {
@@ -369,7 +369,7 @@ tbody tr:hover { background: var(--bg-main); }
 
 <script>
 /* ===== Configuration & State ===== */
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbyd5F5EOIJQWr95s9hY4HcYIVzHQBx-saWMMVtUOh0EPWDW2T4Ib3LLPYXT7NS0kxhD/exec';
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbzaOXfpHvN6UGV_nc-5Tm5QBKLGskYDET6fzoePRGub9VU5XhDDfZutxSlP7yMnCF1j/exec';
 
 let RAW_DATA = [];
 let FILTERED_DATA = [];
@@ -407,6 +407,7 @@ async function fetchData() {
         if (!response.ok) throw new Error("HTTP Status " + response.status);
         const rawResponse = await response.json();
         
+        // Handle object with 'rows' array or direct array
         if (rawResponse && rawResponse.rows && Array.isArray(rawResponse.rows)) {
             RAW_DATA = normalizeData(rawResponse.rows);
             if (rawResponse.asOf) document.getElementById('latestDate').innerText = ' ' + rawResponse.asOf;
@@ -432,6 +433,8 @@ async function fetchData() {
 function normalizeData(rawData) {
     if (!rawData) return [];
     let arr = Array.isArray(rawData) ? rawData : (rawData.data || rawData.items || []);
+    
+    // Check if it's a 2D array (Sheets format)
     if (Array.isArray(arr[0])) {
         const headers = arr[0];
         arr = arr.slice(1).map(row => {
@@ -559,7 +562,7 @@ function aggData(data, keyField, limit = 0) {
     return arr;
 }
 
-// ฟังก์ชันแปลงรูปแบบ "ดด/ปปปป" เป็นรูปแบบที่เรียงลำดับได้
+// Function to parse "MM/YYYY" for correct chronological sorting
 function parseMonthYear(myString) {
     if (!myString || myString === 'ไม่ระบุ') return 0;
     const parts = myString.split('/');
@@ -567,8 +570,7 @@ function parseMonthYear(myString) {
         const m = parseInt(parts[0], 10);
         const y = parseInt(parts[1], 10);
         if (!isNaN(m) && !isNaN(y)) {
-             // ปีคูณ 100 แล้วบวกเดือน จะได้ตัวเลขที่เรียงลำดับถูกต้อง เช่น 256704
-             return (y * 100) + m;
+             return (y * 100) + m; // Example: 256704
         }
     }
     return 0;
@@ -622,8 +624,7 @@ function renderCharts() {
         { label: 'คงเหลือ (รอเคลม)', data: claimData.map(d => d.ou), backgroundColor: COLORS.comp, borderRadius: 4 }
     ]);
 
-    // 5. Monthly Trend
-    // ปรับการเรียงลำดับ (Sort) โดยใช้ parseMonthYear ฟังก์ชันเพื่อให้เรียงตามลำดับเวลาที่ถูกต้อง
+    // 5. Monthly Trend (Sorted chronologically using parseMonthYear)
     let monthData = aggData(FILTERED_DATA, 'md').sort((a, b) => {
         return parseMonthYear(a.name) - parseMonthYear(b.name);
     });
@@ -697,7 +698,7 @@ function populateFilters() {
         const select = document.getElementById(id);
         let uniqueVals = [...new Set(RAW_DATA.map(d => d[key]))].filter(v => v !== 'ไม่ระบุ');
         
-        // ถ้าเป็นตัวกรอง 'เดือนตั้งหนี้' (f-mon) ให้เรียงตามลำดับเวลาด้วย
+        // Sort chronologically for month dropdown, otherwise alphabetically
         if (id === 'f-mon') {
              uniqueVals.sort((a, b) => parseMonthYear(a) - parseMonthYear(b));
         } else {
@@ -715,6 +716,7 @@ function populateFilters() {
     }
 }
 
+// User Interactions
 document.getElementById('f-reset').addEventListener('click', () => {
     ['f-fund', 'f-age', 'f-st', 'f-mon', 'f-cl'].forEach(id => document.getElementById(id).value = '');
     updateDashboard();
@@ -732,13 +734,8 @@ document.getElementById('themeBtn').addEventListener('click', () => {
     }
 });
 
+// Initialization
 document.addEventListener('DOMContentLoaded', fetchData);
 </script>
 </body>
 </html>
-```eof
-
-**การแก้ไขที่ดำเนินการแล้ว:**
-1. เปลี่ยนคำว่า "ชดเชย" เป็น **"ประมาณการชดเชย"** ในทุกจุดที่คุณแนะนำเรียบร้อยแล้ว
-2. สร้างฟังก์ชัน `parseMonthYear(myString)` เพื่อใช้สำหรับการจัดเรียงข้อมูลเดือนและปีที่อยู่ในรูปแบบ `ดด/ปปปป`
-3. นำฟังก์ชันนี้ไปใช้ในการจัดเรียง (Sort) ข้อมูลในกราฟเส้น (หัวข้อที่ 4) และใน Dropdown list ตัวกรองเดือนตั้งหนี้ เพื่อให้เรียงลำดับตามเวลา (Chronological) ได้อย่างถูกต้องครับ
